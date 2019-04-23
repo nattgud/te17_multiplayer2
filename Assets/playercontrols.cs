@@ -9,11 +9,12 @@ public class playercontrols : NetworkBehaviour
     public float sensitivity = 2f;
     private float speed = 5f;
     private float jumpSpeed = 8.0f;
-    private float gravity = 0.04f;
+    private float gravity = 0.4f;
     private Transform cam;
     private CharacterController control;
     private Vector3 moveDirection = Vector3.zero;
     private NetworkManager net;
+    public ParticleSystem muzzle;
     private float fireTimer = 0f;
     [SyncVar]
     public float hp = 100;
@@ -22,12 +23,14 @@ public class playercontrols : NetworkBehaviour
     void Start()
     {
         if(isLocalPlayer) {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
             GameObject.Find("overheadCam").SetActive(false);
             cam = transform.Find("Main Camera");
             control = GetComponent<CharacterController>();
             net = GameObject.Find("Terrain").GetComponent<NetworkManager>();
         } else {
-            transform.Find("Main Camera").GetComponent<Camera>().enabled = false;//gameObject.SetActive(false);
+            transform.Find("Main Camera").GetComponent<Camera>().enabled = false;
         }
     }
 
@@ -53,11 +56,12 @@ public class playercontrols : NetworkBehaviour
             }
             if(Input.GetButton("Fire1")) {
                 if(fireTimer == 0) {
+                    muzzle.Play();
                     fireTimer = 0.2f;
                     RaycastHit hit;
-                    if (Physics.Raycast(transform.Find("Main Camera").position, transform.Find("Main Camera").TransformDirection(Vector3.forward), out hit, Mathf.Infinity)) {
+                    if(Physics.Raycast(transform.Find("Main Camera").position, transform.Find("Main Camera").TransformDirection(Vector3.forward), out hit, Mathf.Infinity)) {
                         if(hit.transform.tag == "Player") {
-                            hit.transform.GetComponent<playercontrols>().hp -= 10;
+                            hit.transform.GetComponent<playercontrols>().damage(10);
                             if(hit.transform.GetComponent<playercontrols>().hp <= 0) {
                                 kills++;
                             }
@@ -90,5 +94,16 @@ public class playercontrols : NetworkBehaviour
         Transform pos = net.GetStartPosition();
         transform.position = pos.position;
         hp = 100;
+    }
+    [Client]
+    void damage(float dmg)
+    {
+        CmdDmg(dmg);
+    }
+
+    [Command]
+    void CmdDmg(float dmg)
+    {
+        hp -= dmg;
     }
 }

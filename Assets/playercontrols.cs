@@ -26,6 +26,7 @@ public class playercontrols : NetworkBehaviour
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
             GameObject.Find("overheadCam").SetActive(false);
+            GetComponent<Renderer>().material.color = new Color(200, 100, 0);
             cam = transform.Find("Main Camera");
             control = GetComponent<CharacterController>();
             net = GameObject.Find("Terrain").GetComponent<NetworkManager>();
@@ -61,11 +62,8 @@ public class playercontrols : NetworkBehaviour
                     RaycastHit hit;
                     if(Physics.Raycast(transform.Find("Main Camera").position, transform.Find("Main Camera").TransformDirection(Vector3.forward), out hit, Mathf.Infinity)) {
                         if(hit.transform.tag == "Player") {
-                            hit.transform.GetComponent<playercontrols>().damage(10);
-                            if(hit.transform.GetComponent<playercontrols>().hp <= 0) {
-                                kills++;
-                            }
-                            Debug.Log(hit.transform.tag);
+                            hit.transform.GetComponent<playercontrols>().CmdDamage(10);
+                            //Debug.Log(hit.transform.tag);
                         }
                     }
                 }
@@ -78,32 +76,47 @@ public class playercontrols : NetworkBehaviour
             moveDirection.y -= gravity;
             control.Move(moveDirection * Time.deltaTime);
             if(transform.position.y < -15) {
-                die();
+                CmdDeath();
             }
             if (Input.GetKey("escape"))
             {
                 Application.Quit();
             }
             if(hp <= 0f) {
-                die();
+                CmdDeath();
             }
         }
     }
+    /*
     public void die() {
         deaths++;
         Transform pos = net.GetStartPosition();
         transform.position = pos.position;
         hp = 100;
     }
-    [Client]
-    void damage(float dmg)
-    {
-        CmdDmg(dmg);
-    }
-
-    [Command]
-    void CmdDmg(float dmg)
+    */
+    [ClientRpc]
+    void RpcDamage(float dmg)
     {
         hp -= dmg;
+       
+    }
+    [Command]
+    void CmdDamage(float dmg)
+    {
+        RpcDamage(dmg);
+    }
+    [ClientRpc]
+    void RpcDeath()
+    {
+        deaths++;
+        Transform pos = net.GetStartPosition();
+        transform.position = pos.position;
+        hp = 100;
+    }
+    [Command]
+    void CmdDeath()
+    {
+        RpcDeath();
     }
 }
